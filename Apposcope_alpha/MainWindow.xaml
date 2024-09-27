@@ -1,0 +1,35 @@
+﻿<Window x:Class="Apposcope_alpha.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:Apposcope_alpha"
+        mc:Ignorable="d"
+        Title="Apposcope"
+        Height="400"
+        Width="600"
+        WindowStartupLocation="CenterScreen"
+        ResizeMode="NoResize">
+
+    <!-- Grid als Basis-Layout -->
+    <Grid>
+        <!-- Canvas zum Zeichnen des Rahmens -->
+        <Canvas x:Name="mainCanvas"
+                Background="Transparent">
+            <!-- Deine bestehenden Buttons, die zentriert bleiben -->
+            <StackPanel HorizontalAlignment="Center"
+                        VerticalAlignment="Center">
+                <Button Content="Rahmen ziehen"
+                        Width="150"
+                        Height="40"
+                        Margin="5"
+                        Click="DrawFrame_Click" />
+                <Button Content="Abbrechen"
+                        Width="150"
+                        Height="40"
+                        Margin="5"
+                        Click="Cancel_Click" />
+            </StackPanel>
+        </Canvas>
+    </Grid>
+</Window>
