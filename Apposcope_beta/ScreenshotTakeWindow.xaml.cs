@@ -1,4 +1,5 @@
-﻿using System.Drawing; // Für Graphics und Bitmap (du musst System.Drawing.Common per NuGet hinzufügen)
+﻿using System.Diagnostics;
+using System.Drawing; // Für Graphics und Bitmap (du musst System.Drawing.Common per NuGet hinzufügen)
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -7,20 +8,29 @@ using WpfPoint = System.Windows.Point;
 using WpfRectangle = System.Windows.Shapes.Rectangle;
 
 
-namespace Apposcope_alpha
+namespace Apposcope_beta
 {
-    public partial class SecondMonitorWindow : Window
+    public partial class ScreenshotTakeWindow : Window
     {
         private WpfPoint startPoint;
         private WpfRectangle selectionRectangle;
         private MonitorInfo currentMonitor; // Die aktuellen Monitorinformationen
         private MonitorInfo targetMonitorShow; // Der Monitor, auf dem das ScreenshotWindow angezeigt werden soll
 
-        public SecondMonitorWindow(MonitorInfo monitorInfo, MonitorInfo targetScreenshotWindowMonitor)
+        public ScreenshotTakeWindow(MonitorInfo takeScreenshotMonitor, MonitorInfo showScreenshotMonitor)
         {
             InitializeComponent();
-            currentMonitor = monitorInfo; // Monitorinformationen speichern
-            targetMonitorShow = targetScreenshotWindowMonitor;
+            currentMonitor = takeScreenshotMonitor; // Monitorinformationen speichern
+            targetMonitorShow = showScreenshotMonitor;
+
+            // Positionsangaben nach Wechsel zu TakeScreenshotMonitor
+            // Monitorfenster für den Rahmen des Screenshots
+            Debug.WriteLine("Jetzt ist das Fenster für die Screenshot-Aufnahme geöffnet!");
+            Debug.WriteLine($"Fenster für Screenshot aufnehmen: Monitor = {currentMonitor.MonitorNumber} Left = {currentMonitor.Left}, Top = {currentMonitor.Top}, Width = {currentMonitor.Width}, Height = {currentMonitor.Height}");
+
+            // Monitor für das Anzeigen des Screenshots (zugleich auch Monitor, auf dem das Hauptfenster jetzt ist)
+            Debug.WriteLine($"Fenster für Screenshot anzeigen: Monitor = {targetMonitorShow.MonitorNumber} Left = {targetMonitorShow.Left}, Top = {targetMonitorShow.Top}, Width = {targetMonitorShow.Width}, Height = {targetMonitorShow.Height}");
+
         }
 
         private void OnMouseDown(object sender, MouseButtonEventArgs e)
@@ -102,19 +112,22 @@ namespace Apposcope_alpha
             // Lade den Screenshot und erhalte die Breite und Höhe des Bildes
             var bitmap = new BitmapImage(new Uri(screenshotPath));
 
-            var screenshotWindow = new ScreenshotWindow(screenshotPath);
+            var screenshotShowWindow = new ScreenshotShowWindow(screenshotPath, currentMonitor);
 
             // Setze die Größe des Fensters auf die Größe des Screenshots
-            screenshotWindow.Width = bitmap.PixelWidth;
-            screenshotWindow.Height = bitmap.PixelHeight;
+            screenshotShowWindow.Width = bitmap.PixelWidth;
+            screenshotShowWindow.Height = bitmap.PixelHeight;
 
-            // Positioniere das Fenster auf dem Monitor des Startfensters
-            //screenshotWindow.WindowStartupLocation = WindowStartupLocation.CenterScreen;
-            screenshotWindow.Top = targetMonitorShow.Top + 50;
-            screenshotWindow.Left = targetMonitorShow.Left + 50;
-            screenshotWindow.Width = targetMonitorShow.Width;
-            screenshotWindow.Height = targetMonitorShow.Height;
-            screenshotWindow.Show();
+            // Berechne die Mitte des Zielmonitors, basierend auf der Monitorgröße und dem Fenster
+            double centerX = targetMonitorShow.Left + (targetMonitorShow.Width - screenshotShowWindow.Width) / 2;
+            double centerY = targetMonitorShow.Top + (targetMonitorShow.Height - screenshotShowWindow.Height) / 2;
+
+            // Setze die Position des Fensters auf die berechnete Mitte
+            screenshotShowWindow.Left = centerX;
+            screenshotShowWindow.Top = centerY;
+
+            screenshotShowWindow.Show();
         }
+
     }
 }

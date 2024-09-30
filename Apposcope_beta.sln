@@ -1,9 +1,8 @@
-﻿
-Microsoft Visual Studio Solution File, Format Version 12.00
+﻿Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.11.35312.102
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Apposcope_alpha", "Apposcope_alpha\Apposcope_alpha.csproj", "{F7DB8557-8CD7-44E0-8E35-F6320D028D69}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Apposcope_beta", "Apposcope_beta\Apposcope_beta.csproj", "{F7DB8557-8CD7-44E0-8E35-F6320D028D69}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

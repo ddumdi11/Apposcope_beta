@@ -2,7 +2,7 @@
 using System.Data;
 using System.Windows;
 
-namespace Apposcope_alpha
+namespace Apposcope_beta
 {
     /// <summary>
     /// Interaction logic for App.xaml
