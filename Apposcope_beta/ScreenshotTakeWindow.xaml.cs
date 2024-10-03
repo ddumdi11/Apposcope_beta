@@ -14,22 +14,26 @@ namespace Apposcope_beta
     {
         private WpfPoint startPoint;
         private WpfRectangle selectionRectangle;
-        private MonitorInfo currentMonitor; // Die aktuellen Monitorinformationen
-        private MonitorInfo targetMonitorShow; // Der Monitor, auf dem das ScreenshotWindow angezeigt werden soll
+        private MonitorInfoOld takeScreenshotMonitor; // Die aktuellen Monitorinformationen
+        private MonitorInfoOld showScreenshotMonitor; // Der Monitor, auf dem das ScreenshotWindow angezeigt werden soll
+        private int screenshotLeft;
+        private int screenshotTop;
+        private double topOffset;
 
-        public ScreenshotTakeWindow(MonitorInfo takeScreenshotMonitor, MonitorInfo showScreenshotMonitor)
+        public ScreenshotTakeWindow(MonitorInfoOld takeScreenshotMonitor, MonitorInfoOld showScreenshotMonitor, double topOffset)
         {
             InitializeComponent();
-            currentMonitor = takeScreenshotMonitor; // Monitorinformationen speichern
-            targetMonitorShow = showScreenshotMonitor;
+            this.takeScreenshotMonitor = takeScreenshotMonitor; // Monitorinformationen speichern
+            this.showScreenshotMonitor = showScreenshotMonitor;
+            this.topOffset = topOffset;
 
             // Positionsangaben nach Wechsel zu TakeScreenshotMonitor
             // Monitorfenster für den Rahmen des Screenshots
             Debug.WriteLine("Jetzt ist das Fenster für die Screenshot-Aufnahme geöffnet!");
-            Debug.WriteLine($"Fenster für Screenshot aufnehmen: Monitor = {currentMonitor.MonitorNumber} Left = {currentMonitor.Left}, Top = {currentMonitor.Top}, Width = {currentMonitor.Width}, Height = {currentMonitor.Height}");
+            Debug.WriteLine($"Fenster für Screenshot aufnehmen: Monitor = {this.takeScreenshotMonitor.MonitorNumber} Left = {this.takeScreenshotMonitor.Left}, Top = {this.takeScreenshotMonitor.Top}, Width = {this.takeScreenshotMonitor.Width}, Height = {this.takeScreenshotMonitor.Height}");
 
             // Monitor für das Anzeigen des Screenshots (zugleich auch Monitor, auf dem das Hauptfenster jetzt ist)
-            Debug.WriteLine($"Fenster für Screenshot anzeigen: Monitor = {targetMonitorShow.MonitorNumber} Left = {targetMonitorShow.Left}, Top = {targetMonitorShow.Top}, Width = {targetMonitorShow.Width}, Height = {targetMonitorShow.Height}");
+            Debug.WriteLine($"Fenster für Screenshot anzeigen: Monitor = {this.showScreenshotMonitor.MonitorNumber} Left = {this.showScreenshotMonitor.Left}, Top = {this.showScreenshotMonitor.Top}, Width = {this.showScreenshotMonitor.Width}, Height = {this.showScreenshotMonitor.Height}");
 
         }
 
@@ -73,8 +77,8 @@ namespace Apposcope_beta
 
                 // Verwende die Monitorinformationen, um den richtigen Bereich zu erfassen
                 var screenshotPath = TakeScreenshot(
-                    (int)(currentMonitor.Left + selectionTopLeft.X),
-                    (int)(currentMonitor.Top + selectionTopLeft.Y),
+                    (int)(takeScreenshotMonitor.Left + selectionTopLeft.X),
+                    (int)(takeScreenshotMonitor.Top + selectionTopLeft.Y),
                     (int)selectionRectangle.Width,
                     (int)selectionRectangle.Height);
 
@@ -90,21 +94,34 @@ namespace Apposcope_beta
 
         private string TakeScreenshot(int x, int y, int width, int height)
         {
-            string screenshotPath = System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Desktop), "screenshot.png");
-
-            using (Bitmap bitmap = new Bitmap(width, height))
+            try
             {
-                using (Graphics g = Graphics.FromImage(bitmap))
+                string screenshotPath = System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Desktop), "screenshot.png");
+
+                using (Bitmap bitmap = new Bitmap(width, height))
                 {
-                    // Verwende die berechneten Koordinaten basierend auf dem Monitor
-                    g.CopyFromScreen(x, y, 0, 0, new System.Drawing.Size(width, height));
+                    using (Graphics g = Graphics.FromImage(bitmap))
+                    {
+                        // Verwende die berechneten Koordinaten basierend auf dem Monitor
+                        g.CopyFromScreen(x, y, 0, 0, new System.Drawing.Size(width, height));
+                    }
+
+                    // Screenshot speichern
+                    bitmap.Save(screenshotPath, System.Drawing.Imaging.ImageFormat.Png);
+                    // Koordinaten speichern
+                    screenshotLeft = x;
+                    screenshotTop = y;
+                    Debug.WriteLine("Screenshot Abstand von links: " + screenshotLeft);
+                    Debug.WriteLine("Screenshot Abstand von oben: " + screenshotTop);
                 }
 
-                // Screenshot speichern
-                bitmap.Save(screenshotPath, System.Drawing.Imaging.ImageFormat.Png);
+                return screenshotPath;
             }
-
-            return screenshotPath;
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Fehler beim Erstellen des Screenshots: {ex.Message}");
+                return string.Empty;
+            }
         }
 
         private void ShowScreenshot(string screenshotPath)
@@ -112,22 +129,26 @@ namespace Apposcope_beta
             // Lade den Screenshot und erhalte die Breite und Höhe des Bildes
             var bitmap = new BitmapImage(new Uri(screenshotPath));
 
-            var screenshotShowWindow = new ScreenshotShowWindow(screenshotPath, currentMonitor);
+            // Verwende den Zielmonitor, um das Fenster dort zu öffnen (statt auf dem aktuellen Monitor)
+            var screenshotShowWindow = new ScreenshotShowWindow(screenshotPath, showScreenshotMonitor, screenshotLeft, screenshotTop, takeScreenshotMonitor); // Zielmonitor ist gegenüberliegend
 
-            // Setze die Größe des Fensters auf die Größe des Screenshots
-            screenshotShowWindow.Width = bitmap.PixelWidth;
-            screenshotShowWindow.Height = bitmap.PixelHeight;
+            screenshotShowWindow.WindowStyle = WindowStyle.None; // Kein Rahmen
+            screenshotShowWindow.WindowState = WindowState.Normal; // Kein Maximieren, damit wir die Position setzen können
+            screenshotShowWindow.Topmost = true; // Immer im Vordergrund
 
-            // Berechne die Mitte des Zielmonitors, basierend auf der Monitorgröße und dem Fenster
-            double centerX = targetMonitorShow.Left + (targetMonitorShow.Width - screenshotShowWindow.Width) / 2;
-            double centerY = targetMonitorShow.Top + (targetMonitorShow.Height - screenshotShowWindow.Height) / 2;
+            // Setze die Position des Fensters auf den Zielmonitor (targetMonitorShow)
+            screenshotShowWindow.Left = showScreenshotMonitor.Left; // X-Koordinate des Zielmonitors
+            screenshotShowWindow.Top = showScreenshotMonitor.Top - topOffset;   // Y-Koordinate des Zielmonitors
 
-            // Setze die Position des Fensters auf die berechnete Mitte
-            screenshotShowWindow.Left = centerX;
-            screenshotShowWindow.Top = centerY;
+            // Setze die Größe des Fensters entsprechend dem Zielmonitor
+            screenshotShowWindow.Width = showScreenshotMonitor.Width;
+            screenshotShowWindow.Height = showScreenshotMonitor.Height;
 
+            // Zeige das Fenster
             screenshotShowWindow.Show();
         }
+
+
 
     }
 }
