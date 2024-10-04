@@ -16,25 +16,30 @@ namespace Apposcope_beta
         private WpfRectangle selectionRectangle;
         private MonitorInfoOld takeScreenshotMonitor; // Die aktuellen Monitorinformationen
         private MonitorInfoOld showScreenshotMonitor; // Der Monitor, auf dem das ScreenshotWindow angezeigt werden soll
+        private MonitorInfo takeScreenshotMonitorNew; // Die aktuellen Monitorinformationen
+        private MonitorInfo showScreenshotMonitorNew; // Der Monitor, auf dem das ScreenshotWindow angezeigt werden soll
         private int screenshotLeft;
         private int screenshotTop;
         private double topOffset;
 
-        public ScreenshotTakeWindow(MonitorInfoOld takeScreenshotMonitor, MonitorInfoOld showScreenshotMonitor, double topOffset)
+        public ScreenshotTakeWindow(MonitorInfoOld takeScreenshotMonitor, MonitorInfoOld showScreenshotMonitor, double topOffset, MonitorInfo takeScreenshotMonitorNew, MonitorInfo showScreenshotMonitorNew)
         {
             InitializeComponent();
             this.takeScreenshotMonitor = takeScreenshotMonitor; // Monitorinformationen speichern
             this.showScreenshotMonitor = showScreenshotMonitor;
+            this.takeScreenshotMonitorNew = takeScreenshotMonitorNew;
+            this.showScreenshotMonitorNew = showScreenshotMonitorNew;
             this.topOffset = topOffset;
 
             // Positionsangaben nach Wechsel zu TakeScreenshotMonitor
             // Monitorfenster für den Rahmen des Screenshots
             Debug.WriteLine("Jetzt ist das Fenster für die Screenshot-Aufnahme geöffnet!");
             Debug.WriteLine($"Fenster für Screenshot aufnehmen: Monitor = {this.takeScreenshotMonitor.MonitorNumber} Left = {this.takeScreenshotMonitor.Left}, Top = {this.takeScreenshotMonitor.Top}, Width = {this.takeScreenshotMonitor.Width}, Height = {this.takeScreenshotMonitor.Height}");
+            Debug.WriteLine($"Neu! Fenster für Screenshot aufnehmen: Monitor = {this.takeScreenshotMonitorNew.MonitorNumber} Left = {this.takeScreenshotMonitorNew.WpfLeft}, Top = {this.takeScreenshotMonitorNew.WpfTop}, Width = {this.takeScreenshotMonitorNew.WpfWidth}, Height = {this.takeScreenshotMonitorNew.WpfHeight}");
 
             // Monitor für das Anzeigen des Screenshots (zugleich auch Monitor, auf dem das Hauptfenster jetzt ist)
             Debug.WriteLine($"Fenster für Screenshot anzeigen: Monitor = {this.showScreenshotMonitor.MonitorNumber} Left = {this.showScreenshotMonitor.Left}, Top = {this.showScreenshotMonitor.Top}, Width = {this.showScreenshotMonitor.Width}, Height = {this.showScreenshotMonitor.Height}");
-
+            Debug.WriteLine($"Neu! Fenster für Screenshot anzeigen: Monitor = {this.showScreenshotMonitorNew.MonitorNumber} Left = {this.showScreenshotMonitorNew.WpfLeft}, Top = {this.showScreenshotMonitorNew.WpfTop}, Width = {this.showScreenshotMonitorNew.WpfWidth}, Height = {this.showScreenshotMonitor.Height}");
         }
 
         private void OnMouseDown(object sender, MouseButtonEventArgs e)

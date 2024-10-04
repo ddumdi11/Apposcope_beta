@@ -94,7 +94,7 @@ namespace Apposcope_beta
             Debug.WriteLine($"Fenster für Screenshot anzeigen: Monitor = {targetMonitorSsShow.MonitorNumber} Left = {targetMonitorSsShow.WpfLeft}, Top = {targetMonitorSsShow.WpfTop}, Width = {targetMonitorSsShow.WpfWidth}, Height = {targetMonitorSsShow.WpfHeight}");
 
             // Neues Fenster für den zweiten Monitor erstellen und die Monitorinformationen übergeben
-            var screenshotTakeWindow = new ScreenshotTakeWindow(monitorInfoConverter(targetMonitorSsTake), monitorInfoConverter(targetMonitorSsShow), topAddVal);
+            var screenshotTakeWindow = new ScreenshotTakeWindow(monitorInfoConverter(targetMonitorSsTake), monitorInfoConverter(targetMonitorSsShow), topAddVal, targetMonitorSsTake, targetMonitorSsShow);
 
             // Berechne den Offset und setze die Position des Fensters
             Debug.WriteLine("Der berechnete topOffset mit Monitor-1-Top - Monitor-2-top ist: " + topAddVal);
