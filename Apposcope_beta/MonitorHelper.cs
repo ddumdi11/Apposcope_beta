@@ -53,36 +53,18 @@ public static class MonitorHelper
         }
     }
 
-    public static List<MonitorInfoEx> GetMonitors()
+    // Methode zum Abrufen eines Wertes, um Wiederholungen zu vermeiden
+    private static double GetMonitorValue(int v, Func<MonitorInfoEx, double> valueSelector)
     {
-        InitializeMonitors();
-        return monitors;
+        InitializeMonitors(); // Monitore initialisieren, falls noch nicht geschehen
+        return valueSelector(monitors[v - 1]);
     }
 
-    // Getter für SystemMonitorLeft
-    public static double GetSystemMonitorLeft(int v)
-    {
-        InitializeMonitors(); // Stelle sicher, dass die Monitore initialisiert sind
-        return monitors[v-1].rcMonitor.Left;
-    }
-
-    internal static double GetSystemMonitorTop(int v)
-    {
-        InitializeMonitors(); // Stelle sicher, dass die Monitore initialisiert sind
-        return monitors[v-1].rcMonitor.Top;
-    }
-
-    internal static double GetSystemMonitorWidth(int v)
-    {
-        InitializeMonitors(); // Stelle sicher, dass die Monitore initialisiert sind
-        return monitors[v-1].rcMonitor.Right;
-    }
-
-    internal static double GetSystemMonitorHeight(int v)
-    {
-        InitializeMonitors(); // Stelle sicher, dass die Monitore initialisiert sind
-        return monitors[v-1].rcMonitor.Bottom;
-    }
-
-    // Weitere Getter-Methoden (z.B. Top, Width, Height) können hier folgen
+    // Getter-Methoden
+    public static double GetSystemMonitorLeft(int v) => GetMonitorValue(v, m => m.rcMonitor.Left);
+    public static double GetSystemMonitorTop(int v) => GetMonitorValue(v, m => m.rcMonitor.Top);
+    public static double GetSystemMonitorRight(int v) => GetMonitorValue(v, m => m.rcMonitor.Right);
+    public static double GetSystemMonitorBottom(int v) => GetMonitorValue(v, m => m.rcMonitor.Bottom);
+    public static double GetSystemMonitorWidth(int v) => GetMonitorValue(v, m => m.rcMonitor.Right - m.rcMonitor.Left);
+    public static double GetSystemMonitorHeight(int v) => GetMonitorValue(v, m => m.rcMonitor.Bottom - m.rcMonitor.Top);
 }

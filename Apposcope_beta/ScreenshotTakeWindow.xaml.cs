@@ -1,5 +1,5 @@
 ﻿using System.Diagnostics;
-using System.Drawing; // Für Graphics und Bitmap (du musst System.Drawing.Common per NuGet hinzufügen)
+using System.Drawing; // Für Graphics und Bitmap (System.Drawing.Common per NuGet hinzufügen)
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -14,47 +14,42 @@ namespace Apposcope_beta
     {
         private WpfPoint startPoint;
         private WpfRectangle selectionRectangle;
-        private MonitorInfoOld takeScreenshotMonitor; // Die aktuellen Monitorinformationen
-        private MonitorInfoOld showScreenshotMonitor; // Der Monitor, auf dem das ScreenshotWindow angezeigt werden soll
-        private MonitorInfo takeScreenshotMonitorNew; // Die aktuellen Monitorinformationen
-        private MonitorInfo showScreenshotMonitorNew; // Der Monitor, auf dem das ScreenshotWindow angezeigt werden soll
+        private MonitorData monitorData;
+        private MonitorInfo thisMonitor;
         private int screenshotLeft;
         private int screenshotTop;
-        private double topOffset;
+        public string CapturedImagePath { get; private set; } // Öffentliche Eigenschaft
+        private ScreenshotShowWindow showScreenshotWindow;
 
-        public ScreenshotTakeWindow(MonitorInfoOld takeScreenshotMonitor, MonitorInfoOld showScreenshotMonitor, double topOffset, MonitorInfo takeScreenshotMonitorNew, MonitorInfo showScreenshotMonitorNew)
+        public ScreenshotTakeWindow(MonitorData monitorData)
         {
             InitializeComponent();
-            this.takeScreenshotMonitor = takeScreenshotMonitor; // Monitorinformationen speichern
-            this.showScreenshotMonitor = showScreenshotMonitor;
-            this.takeScreenshotMonitorNew = takeScreenshotMonitorNew;
-            this.showScreenshotMonitorNew = showScreenshotMonitorNew;
-            this.topOffset = topOffset;
+            this.monitorData = monitorData;
 
-            // Positionsangaben nach Wechsel zu TakeScreenshotMonitor
-            // Monitorfenster für den Rahmen des Screenshots
-            Debug.WriteLine("Jetzt ist das Fenster für die Screenshot-Aufnahme geöffnet!");
-            Debug.WriteLine($"Fenster für Screenshot aufnehmen: Monitor = {this.takeScreenshotMonitor.MonitorNumber} Left = {this.takeScreenshotMonitor.Left}, Top = {this.takeScreenshotMonitor.Top}, Width = {this.takeScreenshotMonitor.Width}, Height = {this.takeScreenshotMonitor.Height}");
-            Debug.WriteLine($"Neu! Fenster für Screenshot aufnehmen: Monitor = {this.takeScreenshotMonitorNew.MonitorNumber} Left = {this.takeScreenshotMonitorNew.WpfLeft}, Top = {this.takeScreenshotMonitorNew.WpfTop}, Width = {this.takeScreenshotMonitorNew.WpfWidth}, Height = {this.takeScreenshotMonitorNew.WpfHeight}");
+            // Monitor-Informationen setzen
+            SetMonitorInfo();
 
-            // Monitor für das Anzeigen des Screenshots (zugleich auch Monitor, auf dem das Hauptfenster jetzt ist)
-            Debug.WriteLine($"Fenster für Screenshot anzeigen: Monitor = {this.showScreenshotMonitor.MonitorNumber} Left = {this.showScreenshotMonitor.Left}, Top = {this.showScreenshotMonitor.Top}, Width = {this.showScreenshotMonitor.Width}, Height = {this.showScreenshotMonitor.Height}");
-            Debug.WriteLine($"Neu! Fenster für Screenshot anzeigen: Monitor = {this.showScreenshotMonitorNew.MonitorNumber} Left = {this.showScreenshotMonitorNew.WpfLeft}, Top = {this.showScreenshotMonitorNew.WpfTop}, Width = {this.showScreenshotMonitorNew.WpfWidth}, Height = {this.showScreenshotMonitor.Height}");
+            // Debug-Ausgabe zur Kontrolle
+            Debug.WriteLine("Fenster für die Screenshot-Aufnahme geöffnet!");
+            Debug.WriteLine(thisMonitor.ToString());
+        }
+
+        // Setzt die Monitorinformationen und platziert das Fenster
+        private void SetMonitorInfo()
+        {
+            thisMonitor = monitorData.GetLenseScreenMonitor();  // LenseScreen-Monitor festlegen
+            this.Left = thisMonitor.SystemLeft;
+            this.Top = thisMonitor.SystemTop;
+            this.Width = thisMonitor.SystemWidth;
+            this.Height = thisMonitor.SystemHeight;
         }
 
         private void OnMouseDown(object sender, MouseButtonEventArgs e)
         {
             startPoint = e.GetPosition(this);
 
-            // Rechteck für den Rahmen erstellen
-            selectionRectangle = new WpfRectangle
-            {
-                Stroke = System.Windows.Media.Brushes.Red,
-                StrokeThickness = 2
-            };
-
-            Canvas.SetLeft(selectionRectangle, startPoint.X);
-            Canvas.SetTop(selectionRectangle, startPoint.Y);
+            // Rechteck für den Auswahlrahmen erstellen
+            selectionRectangle = CreateSelectionRectangle(startPoint);
             secondCanvas.Children.Add(selectionRectangle);
         }
 
@@ -62,63 +57,87 @@ namespace Apposcope_beta
         {
             if (selectionRectangle == null) return;
 
-            var pos = e.GetPosition(this);
-            var width = Math.Abs(pos.X - startPoint.X);
-            var height = Math.Abs(pos.Y - startPoint.Y);
-
-            selectionRectangle.Width = width;
-            selectionRectangle.Height = height;
-
-            Canvas.SetLeft(selectionRectangle, Math.Min(pos.X, startPoint.X));
-            Canvas.SetTop(selectionRectangle, Math.Min(pos.Y, startPoint.Y));
+            var currentPosition = e.GetPosition(this);
+            UpdateSelectionRectangle(currentPosition);
         }
 
-        private void OnMouseUp(object sender, MouseButtonEventArgs e)
+        private async void OnMouseUp(object sender, MouseButtonEventArgs e)
         {
             if (selectionRectangle != null)
             {
-                // Erfassung des markierten Bereichs und Screenshot aufnehmen
-                var selectionTopLeft = selectionRectangle.TransformToAncestor(this).Transform(new WpfPoint(0, 0));
+                // Kleine Verzögerung, um sicherzustellen, dass der Rahmen korrekt gezeichnet wird
+                await Task.Delay(100); // 100 Millisekunden
 
-                // Verwende die Monitorinformationen, um den richtigen Bereich zu erfassen
-                var screenshotPath = TakeScreenshot(
-                    (int)(takeScreenshotMonitor.Left + selectionTopLeft.X),
-                    (int)(takeScreenshotMonitor.Top + selectionTopLeft.Y),
+                // Koordinaten des Rahmens ermitteln
+                var selectionTopLeft = selectionRectangle.TransformToAncestor(this).Transform(new WpfPoint(0, 0));
+                CapturedImagePath = TakeScreenshot(
+                    (int)(thisMonitor.SystemLeft + selectionTopLeft.X),
+                    (int)(thisMonitor.SystemTop + selectionTopLeft.Y),
                     (int)selectionRectangle.Width,
                     (int)selectionRectangle.Height);
-
-                // Screenshot anzeigen (in einem neuen Fenster auf dem ursprünglichen Monitor)
-                ShowScreenshot(screenshotPath);
 
                 secondCanvas.Children.Remove(selectionRectangle);
                 selectionRectangle = null;
             }
 
-            this.Close(); // Zweites Fenster schließen, wenn der Bereich festgelegt wurde
+            // Screenshot-Fenster aktualisieren oder anzeigen
+            ShowScreenshot(CapturedImagePath);
+            this.Close(); // Fenster nach der Auswahl schließen
         }
 
+
+        // Erstellt das Auswahlrechteck
+        private WpfRectangle CreateSelectionRectangle(WpfPoint startPoint)
+        {
+            return new WpfRectangle
+            {
+                Stroke = System.Windows.Media.Brushes.Red,
+                StrokeThickness = 2,
+                Width = 0, // Initial Breite
+                Height = 0 // Initial Höhe
+            };
+        }
+
+        // Aktualisiert das Auswahlrechteck bei Bewegung der Maus
+        private void UpdateSelectionRectangle(WpfPoint currentPosition)
+        {
+            var width = Math.Abs(currentPosition.X - startPoint.X);
+            var height = Math.Abs(currentPosition.Y - startPoint.Y);
+
+            // Debug-Ausgaben für die Rahmenposition und -größe
+            // Debug.WriteLine($"Rahmen: Start: {startPoint}, Aktuelle Position: {currentPosition}, Breite: {width}, Höhe: {height}");
+
+            selectionRectangle.Width = width;
+            selectionRectangle.Height = height;
+
+            Canvas.SetLeft(selectionRectangle, Math.Min(currentPosition.X, startPoint.X));
+            Canvas.SetTop(selectionRectangle, Math.Min(currentPosition.Y, startPoint.Y));
+        }
+
+        // Screenshot aufnehmen
         private string TakeScreenshot(int x, int y, int width, int height)
         {
             try
             {
-                string screenshotPath = System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Desktop), "screenshot.png");
+                // Erzeuge einen Dateinamen, um sicherzustellen, dass es keine Konflikte gibt
+                string screenshotPath = System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Desktop),
+                                                              $"screenshot_{DateTime.Now:yyyyMMdd_HHmmss}.png");
 
                 using (Bitmap bitmap = new Bitmap(width, height))
                 {
                     using (Graphics g = Graphics.FromImage(bitmap))
                     {
-                        // Verwende die berechneten Koordinaten basierend auf dem Monitor
+                        // Screenshot erstellen
                         g.CopyFromScreen(x, y, 0, 0, new System.Drawing.Size(width, height));
                     }
-
-                    // Screenshot speichern
                     bitmap.Save(screenshotPath, System.Drawing.Imaging.ImageFormat.Png);
-                    // Koordinaten speichern
-                    screenshotLeft = x;
-                    screenshotTop = y;
-                    Debug.WriteLine("Screenshot Abstand von links: " + screenshotLeft);
-                    Debug.WriteLine("Screenshot Abstand von oben: " + screenshotTop);
                 }
+
+                // Debug-Ausgaben zur Kontrolle
+                screenshotLeft = x;
+                screenshotTop = y;
+                Debug.WriteLine($"Screenshot Abstand von links: {screenshotLeft}");
+                Debug.WriteLine($"Screenshot Abstand von oben: {screenshotTop}");
 
                 return screenshotPath;
             }
@@ -129,31 +148,45 @@ namespace Apposcope_beta
             }
         }
 
+        // Screenshot anzeigen
         private void ShowScreenshot(string screenshotPath)
         {
-            // Lade den Screenshot und erhalte die Breite und Höhe des Bildes
-            var bitmap = new BitmapImage(new Uri(screenshotPath));
+            if (string.IsNullOrEmpty(screenshotPath))
+            {
+                Debug.WriteLine("Kein gültiger Screenshot-Pfad, Fenster wird nicht aktualisiert.");
+                return; // Beende die Methode, wenn der Pfad ungültig ist
+            }
 
-            // Verwende den Zielmonitor, um das Fenster dort zu öffnen (statt auf dem aktuellen Monitor)
-            var screenshotShowWindow = new ScreenshotShowWindow(screenshotPath, showScreenshotMonitor, screenshotLeft, screenshotTop, takeScreenshotMonitor); // Zielmonitor ist gegenüberliegend
-
-            screenshotShowWindow.WindowStyle = WindowStyle.None; // Kein Rahmen
-            screenshotShowWindow.WindowState = WindowState.Normal; // Kein Maximieren, damit wir die Position setzen können
-            screenshotShowWindow.Topmost = true; // Immer im Vordergrund
-
-            // Setze die Position des Fensters auf den Zielmonitor (targetMonitorShow)
-            screenshotShowWindow.Left = showScreenshotMonitor.Left; // X-Koordinate des Zielmonitors
-            screenshotShowWindow.Top = showScreenshotMonitor.Top - topOffset;   // Y-Koordinate des Zielmonitors
-
-            // Setze die Größe des Fensters entsprechend dem Zielmonitor
-            screenshotShowWindow.Width = showScreenshotMonitor.Width;
-            screenshotShowWindow.Height = showScreenshotMonitor.Height;
-
-            // Zeige das Fenster
-            screenshotShowWindow.Show();
+            if (showScreenshotWindow == null)
+            {
+                Debug.WriteLine("Erstelle neues Screenshot-Fenster.");
+                showScreenshotWindow = new ScreenshotShowWindow(screenshotPath, monitorData, screenshotLeft, screenshotTop);
+                showScreenshotWindow.Show();
+            }
+            else
+            {
+                Debug.WriteLine("Aktualisiere bestehendes Screenshot-Fenster.");
+                BringWindowToFront(showScreenshotWindow); // Fenster in den Vordergrund holen
+                showScreenshotWindow.UpdateScreenshot(screenshotPath, screenshotLeft, screenshotTop); // Aktualisiere das Fenster
+            }
         }
 
 
+
+        private void BringWindowToFront(Window window)
+        {
+            if (!window.IsVisible)
+            {
+                window.Show();
+            }
+
+            if (window.WindowState == WindowState.Minimized)
+            {
+                window.WindowState = WindowState.Normal;
+            }
+            window.Activate();
+        }
+        
 
     }
 }

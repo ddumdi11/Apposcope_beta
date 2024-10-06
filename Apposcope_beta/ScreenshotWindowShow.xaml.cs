@@ -15,14 +15,28 @@ namespace Apposcope_beta
     {
         private WpfPoint clickLeftPoint;
         private WpfRectangle selectionRectangle;
-        private MonitorInfoOld showScreenshotMonitor;
-        private MonitorInfoOld takeScreenshotMonitor;
+        private MonitorData monitorData;
+        private MonitorInfo thisMonitor;
 
-        public ScreenshotShowWindow(string imagePath, MonitorInfoOld showScreenshotMonitor, int screenshotLeft, int screenshotTop, MonitorInfoOld takeScreenshotMonitor)
+        public ScreenshotShowWindow(string imagePath, MonitorData monitorData, int screenshotLeft, int screenshotTop)
         {
             InitializeComponent();
 
-            this.takeScreenshotMonitor = takeScreenshotMonitor;
+            this.monitorData = monitorData;
+            thisMonitor = monitorData.GetRemoteControlMonitor();
+
+            // Positionieren des RemoteControl-Fensters
+            this.WindowStyle = WindowStyle.None; // Kein Rahmen
+            this.WindowState = WindowState.Normal; // Kein Maximieren, damit wir die Position setzen können
+            this.Topmost = true; // Immer im Vordergrund
+
+            // Setze die Position des Fensters auf den Zielmonitor (targetMonitorShow)
+            this.Left = thisMonitor.SystemLeft; // X-Koordinate des RemoteControl-Fensters
+            this.Top = thisMonitor.SystemTop;   // Y-Koordinate des RemoteControl-Fensters
+
+            // Setze die Größe des Fensters entsprechend dem RemoteControl-Monitor
+            this.Width = thisMonitor.SystemWidth;
+            this.Height = thisMonitor.SystemHeight;
 
             // Lade den Screenshot und erhalte die Breite und Höhe des Bildes
             BitmapImage bitmap = new BitmapImage();
@@ -51,51 +65,30 @@ namespace Apposcope_beta
             Debug.WriteLine("Tatsächliche Breite des Screenshots: " + actualScreenshotWidth);
             Debug.WriteLine("Tatsächliche Höhe des Screenshots: " + actualScreenshotHeight);
 
-            // Erstelle das Canvas
-            Canvas canvas = new Canvas();
+            // Setze die Größe des Canvas basierend auf der Größe des Bildes
+            ScreenshotCanvas.Width = actualScreenshotWidth;
+            ScreenshotCanvas.Height = actualScreenshotHeight;
 
-            // Erstelle das Bild und setze es auf das Canvas
-            Image screenshotImage = new Image
-            {
-                Source = bitmap,
-                Width = actualScreenshotWidth,  // Setze die tatsächliche Breite des Screenshots
-                Height = actualScreenshotHeight // Setze die tatsächliche Höhe des Screenshots
-            };
+            // Setze den Screenshot im bereits vorhandenen Image-Element
+            ScreenshotImage.Source = bitmap;
 
             // Setze das Bild im Canvas an die linke obere Ecke + Koordinaten des Ursprungsmonitors
-            if (screenshotLeft > showScreenshotMonitor.Width)
-            {
-                Canvas.SetLeft(screenshotImage, screenshotLeft - showScreenshotMonitor.Width);
-                Canvas.SetTop(screenshotImage, screenshotTop - 361);
-            } else
-            {
-                Canvas.SetLeft(screenshotImage, screenshotLeft);
-                Canvas.SetTop(screenshotImage, screenshotTop);
-
-            }            
-            
-
-            // Füge das Bild dem Canvas hinzu
-            canvas.Children.Add(screenshotImage);                        
-
-            // Füge das Canvas dem Fenster hinzu
-            this.Content = canvas;
+            Canvas.SetLeft(ScreenshotImage, screenshotLeft);
+            Canvas.SetTop(ScreenshotImage, screenshotTop);
         }
-
 
 
         private void OnMouseDown(object sender, MouseButtonEventArgs e)
         {
             // Der Klickpunkt innerhalb des ScreenshotWindow
             WpfPoint clickPoint = e.GetPosition(this);
-            WpfPoint absoluteClickPoint = new WpfPoint(clickPoint.X + takeScreenshotMonitor.Width, clickPoint.Y + takeScreenshotMonitor.Top);
+            WpfPoint absoluteClickPoint = new WpfPoint(clickPoint.X + thisMonitor.SystemWidth, clickPoint.Y + thisMonitor.SystemTop);
 
             // Debug-Ausgabe für den Klickpunkt im ScreenshotWindow
             Debug.WriteLine($"Klickpunkt im ScreenshotWindow: {clickPoint}");
             Debug.WriteLine($"WPF-Klickpunkt bei zwei Monitoren: {absoluteClickPoint}");
 
             // Berechne den äquivalenten Klickpunkt auf dem Bildschirm, von dem der Screenshot gemacht wurde
-            // Rechne die absoluten Bildschirmkoordinaten
             int screenX = (int)(clickPoint.X);
             int screenY = (int)(clickPoint.Y);
 
@@ -122,7 +115,39 @@ namespace Apposcope_beta
                 var element = automation.FromPoint(new System.Drawing.Point((int)screenX, (int)screenY));
                 element.AsButton().DoubleClick();
             }
+        }
 
+        private void DrawNewFrame_Click(object sender, EventArgs e)
+        {
+            // Erstelle ein neues ScreenshotTakeWindow
+            var screenshotTakeWindow = new ScreenshotTakeWindow(monitorData);
+            screenshotTakeWindow.Show();
+        }
+
+        public void UpdateScreenshot(string newScreenshotPath, int newScreenshotLeft, int newScreenshotTop)
+        {
+            // Lade den neuen Screenshot
+            BitmapImage newBitmap = new BitmapImage();
+
+            try
+            {
+                newBitmap.BeginInit();
+                newBitmap.UriSource = new Uri(newScreenshotPath);
+                newBitmap.EndInit();
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Fehler beim Laden des neuen Screenshots: {ex.Message}");
+                return;
+            }
+
+            // Aktualisiere den Screenshot im bestehenden Fenster
+            ScreenshotImage.Source = newBitmap;
+
+            // Aktualisiere die Position des Bildes im Canvas, falls erforderlich
+            Canvas.SetLeft(ScreenshotImage, newScreenshotLeft);
+            Canvas.SetTop(ScreenshotImage, newScreenshotTop);
         }
     }
+
 }

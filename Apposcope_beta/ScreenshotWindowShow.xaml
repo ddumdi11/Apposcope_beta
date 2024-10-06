@@ -4,8 +4,31 @@
         Title="ScreenshotShowWindow"
         MouseDown="OnMouseDown">
     <Grid>
-        <!-- Bild ohne Skalierung anzeigen -->
-        <Image x:Name="ScreenshotImage"
-               Stretch="None" />
+        <!-- Definiere zwei Zeilen: Eine für das Bild, eine für den Button -->
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*" />
+            <!-- Platz für das Bild -->
+            <RowDefinition Height="Auto" />
+            <!-- Platz für den Button -->
+        </Grid.RowDefinitions>
+
+        <!-- Canvas für den Screenshot, mit expliziter Größe -->
+        <Canvas x:Name="ScreenshotCanvas"
+                Grid.Row="0"
+                HorizontalAlignment="Left"
+                VerticalAlignment="Top">
+            <Image x:Name="ScreenshotImage"
+                   Stretch="None" />
+        </Canvas>
+
+        <!-- Button in der unteren Zeile -->
+        <Button Grid.Row="1"
+                Content="Neuen Rahmen ziehen"
+                Width="150"
+                Height="40"
+                Margin="5"
+                HorizontalAlignment="Center"
+                VerticalAlignment="Bottom"
+                Click="DrawNewFrame_Click" />
     </Grid>
 </Window>

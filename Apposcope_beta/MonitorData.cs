@@ -1,48 +1,79 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Text;
 
 namespace Apposcope_beta
 {
     public class MonitorData
     {
-        // Daten für den primären Monitor
-        public MonitorInfo PrimaryMonitor { get; set; }
+        public MonitorInfo LenseScreen { get; set; } // Primärer Monitor
+        public MonitorInfo RemoteControl { get; set; } // Sekundärer Monitor
 
-        // Daten für den sekundären Monitor
-        public MonitorInfo SecondaryMonitor { get; set; }
+        // Boolean, um festzustellen, ob der primäre Monitor als RemoteControl fungiert
+        private bool primaryMonitorIsRemoteControl;
 
-        // Methode zum Aktualisieren der Monitor-Nummer
-        public void UpdateMonitorNumber(int newMonitorNumber)
+        public MonitorData()
         {
-            if (newMonitorNumber == 1)
+            LenseScreen = InitializeMonitorInfo(1); // Initialisiere den primären Monitor (LenseScreen)
+            RemoteControl = InitializeMonitorInfo(2); // Initialisiere den sekundären Monitor (RemoteControl)
+
+            // Setze die Monitorrollen
+            LenseScreen.MonitorRole = "LenseScreen";
+            RemoteControl.MonitorRole = "RemoteControl";
+        }
+
+        // Hilfsmethode zur Initialisierung der Monitorinformationen
+        private MonitorInfo InitializeMonitorInfo(int monitorNumber)
+        {
+            return new MonitorInfo
             {
-                // Aktualisiere Primär-Monitor
-                this.PrimaryMonitor.MonitorNumber = newMonitorNumber;
-            }
-            else if (newMonitorNumber == 2)
-            {
-                // Aktualisiere Sekundär-Monitor
-                this.SecondaryMonitor.MonitorNumber = newMonitorNumber;
-            }
+                MonitorNumber = monitorNumber,
+                SystemLeft = MonitorHelper.GetSystemMonitorLeft(monitorNumber),
+                SystemTop = MonitorHelper.GetSystemMonitorTop(monitorNumber),
+                SystemRight = MonitorHelper.GetSystemMonitorRight(monitorNumber),
+                SystemBottom = MonitorHelper.GetSystemMonitorBottom(monitorNumber),
+                SystemWidth = MonitorHelper.GetSystemMonitorWidth(monitorNumber),
+                SystemHeight = MonitorHelper.GetSystemMonitorHeight(monitorNumber)
+            };
+        }
+
+        // Methode, um den aktuellen Monitor festzulegen (wird nur benötigt, falls eine Rolle wechselt)
+        public void SetCurrentMonitor(bool isPrimaryMonitor)
+        {
+            primaryMonitorIsRemoteControl = isPrimaryMonitor;
+        }
+
+        // Gibt den aktuellen RemoteControl-Monitor zurück
+        public MonitorInfo GetRemoteControlMonitor()
+        {
+            return primaryMonitorIsRemoteControl ? LenseScreen : RemoteControl;
+        }
+
+        // Gibt den aktuellen LenseScreen-Monitor zurück
+        public MonitorInfo GetLenseScreenMonitor()
+        {
+            return !primaryMonitorIsRemoteControl ? LenseScreen : RemoteControl;
+        }
+
+        // Methode zur Debug-Ausgabe der Monitorinformationen
+        public override string ToString()
+        {
+            StringBuilder monitorDataStringBuilder = new StringBuilder();
+
+            monitorDataStringBuilder.AppendLine($"Monitor LenseScreen: {LenseScreen.SystemLeft}, {LenseScreen.SystemTop}, {LenseScreen.SystemWidth}, {LenseScreen.SystemHeight}");
+            monitorDataStringBuilder.AppendLine($"Monitor RemoteControl: {RemoteControl.SystemLeft}, {RemoteControl.SystemTop}, {RemoteControl.SystemWidth}, {RemoteControl.SystemHeight}");
+
+            return monitorDataStringBuilder.ToString();
         }
     }
 
     public class MonitorInfo
     {
-        public int MonitorNumber { get; set; } // Aktuelle Monitor-Nummer
-        public double WpfLeft { get; set; } // WPF-Left-Position
-        public double WpfTop { get; set; } // WPF-Top-Position
-        public double WpfWidth { get; set; } // WPF-Breite
-        public double WpfHeight { get; set; } // WPF-Höhe
-
+        public int MonitorNumber { get; set; }
+        public string MonitorRole { get; set; } // Monitorrolle (LenseScreen oder RemoteControl)
         public double SystemLeft { get; set; } // System-Left-Position (Win32 API)
         public double SystemTop { get; set; } // System-Top-Position (Win32 API)
+        public double SystemRight { get; set; } // System-Right-Position (Win32 API)
+        public double SystemBottom { get; set; } // System-Bottom-Position (Win32 API)
         public double SystemWidth { get; set; } // System-Breite (Win32 API)
         public double SystemHeight { get; set; } // System-Höhe (Win32 API)
     }
-
-
 }
