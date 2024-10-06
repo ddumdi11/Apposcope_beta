@@ -8,6 +8,8 @@ using System.Windows.Media.Imaging;
 using WpfPoint = System.Windows.Point;
 using WpfRectangle = System.Windows.Shapes.Rectangle;
 using Window = System.Windows.Window;
+using Label = System.Windows.Controls.Label;
+using Button = System.Windows.Controls.Button;
 
 namespace Apposcope_beta
 {
@@ -119,9 +121,25 @@ namespace Apposcope_beta
 
         private void DrawNewFrame_Click(object sender, EventArgs e)
         {
+            var button = sender as Button;
+            if (button != null)
+            {
+                // Ändere den Text und die Farbe des Buttons als Feedback
+                button.Content = "Rahmen wird gezogen...";
+                button.IsEnabled = false; // Deaktiviere den Button, bis der Vorgang abgeschlossen ist
+            }
+
             // Erstelle ein neues ScreenshotTakeWindow
+            this.ShowOverlayMessage("Rahmen ziehen auf dem linken Bildschirm...");
             var screenshotTakeWindow = new ScreenshotTakeWindow(monitorData);
             screenshotTakeWindow.Show();
+
+            // Rückmeldung, wenn der Vorgang abgeschlossen ist
+            if (button != null)
+            {
+                button.Content = "Neuen Rahmen ziehen";
+                button.IsEnabled = true; // Aktiviere den Button wieder
+            }
         }
 
         public void UpdateScreenshot(string newScreenshotPath, int newScreenshotLeft, int newScreenshotTop)
@@ -148,6 +166,30 @@ namespace Apposcope_beta
             Canvas.SetLeft(ScreenshotImage, newScreenshotLeft);
             Canvas.SetTop(ScreenshotImage, newScreenshotTop);
         }
+
+        public void ShowOverlayMessage(string message)
+        {
+            // Einfaches Overlay-Label
+            Label overlay = new Label
+            {
+                Content = message,
+                Background = System.Windows.Media.Brushes.Black,
+                Foreground = System.Windows.Media.Brushes.White,
+                FontSize = 20,
+                HorizontalAlignment = HorizontalAlignment.Center,
+                VerticalAlignment = VerticalAlignment.Center
+            };
+
+            // Füge das Overlay dem Fenster hinzu
+            ScreenshotCanvas.Children.Add(overlay);
+
+            // Entferne das Overlay nach 2 Sekunden
+            Task.Delay(2000).ContinueWith(_ =>
+            {
+                ScreenshotCanvas.Children.Remove(overlay);
+            }, TaskScheduler.FromCurrentSynchronizationContext());
+        }
+
     }
 
 }
