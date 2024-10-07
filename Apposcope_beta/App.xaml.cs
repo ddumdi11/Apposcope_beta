@@ -9,6 +9,8 @@ namespace Apposcope_beta
     /// </summary>
     public partial class App : Application
     {
+        // Statische Variable, die für alle Fenster verfügbar ist
+        public static ScreenshotShowWindow showScreenshotWindow;
     }
 
 }

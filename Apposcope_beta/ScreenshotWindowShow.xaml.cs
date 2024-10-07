@@ -119,31 +119,38 @@ namespace Apposcope_beta
             }
         }
 
-        private void DrawNewFrame_Click(object sender, EventArgs e)
+        private async void DrawNewFrame_Click(object sender, EventArgs e)
         {
             var button = sender as Button;
             if (button != null)
             {
+                Debug.WriteLine("Button wurde geklickt."); // Debug-Ausgabe, um sicherzustellen, dass der Klick registriert wird
+
                 // Ändere den Text und die Farbe des Buttons als Feedback
                 button.Content = "Rahmen wird gezogen...";
                 button.IsEnabled = false; // Deaktiviere den Button, bis der Vorgang abgeschlossen ist
             }
 
-            // Erstelle ein neues ScreenshotTakeWindow
             this.ShowOverlayMessage("Rahmen ziehen auf dem linken Bildschirm...");
+
+            // Erstelle ein neues ScreenshotTakeWindow
             var screenshotTakeWindow = new ScreenshotTakeWindow(monitorData);
-            screenshotTakeWindow.Show();
+            screenshotTakeWindow.ShowDialog(); // ShowDialog blockiert, bis das Fenster geschlossen wird
 
             // Rückmeldung, wenn der Vorgang abgeschlossen ist
             if (button != null)
             {
                 button.Content = "Neuen Rahmen ziehen";
                 button.IsEnabled = true; // Aktiviere den Button wieder
+                Debug.WriteLine("Rahmen-Ziehen abgeschlossen, Button wurde zurückgesetzt."); // Weitere Debug-Ausgabe
             }
         }
 
+
         public void UpdateScreenshot(string newScreenshotPath, int newScreenshotLeft, int newScreenshotTop)
         {
+            Debug.WriteLine("UpdateScreenshot wurde aufgerufen."); // Prüfe, ob die Methode korrekt aufgerufen wird.
+
             // Lade den neuen Screenshot
             BitmapImage newBitmap = new BitmapImage();
 
@@ -159,12 +166,19 @@ namespace Apposcope_beta
                 return;
             }
 
+            // Debug-Ausgaben, um zu sehen, ob der neue Screenshot korrekt geladen wurde
+            Debug.WriteLine($"Neuer Screenshot geladen: {newScreenshotPath}");
+            Debug.WriteLine($"Screenshot-Größe: Breite = {newBitmap.PixelWidth}, Höhe = {newBitmap.PixelHeight}");
+
+
             // Aktualisiere den Screenshot im bestehenden Fenster
             ScreenshotImage.Source = newBitmap;
 
             // Aktualisiere die Position des Bildes im Canvas, falls erforderlich
             Canvas.SetLeft(ScreenshotImage, newScreenshotLeft);
             Canvas.SetTop(ScreenshotImage, newScreenshotTop);
+
+            Debug.WriteLine("Screenshot wurde im bestehenden Fenster aktualisiert.");
         }
 
         public void ShowOverlayMessage(string message)

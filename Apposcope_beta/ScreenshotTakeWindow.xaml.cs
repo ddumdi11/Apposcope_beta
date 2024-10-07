@@ -12,14 +12,14 @@ namespace Apposcope_beta
 {
     public partial class ScreenshotTakeWindow : Window
     {
+        // Weitere Felder und Variablen, die zur Klasse gehören
         private WpfPoint startPoint;
         private WpfRectangle selectionRectangle;
         private MonitorData monitorData;
         private MonitorInfo thisMonitor;
         private int screenshotLeft;
         private int screenshotTop;
-        public string CapturedImagePath { get; private set; } // Öffentliche Eigenschaft
-        private ScreenshotShowWindow showScreenshotWindow;
+        public string CapturedImagePath { get; private set; } // Öffentliche Eigenschaft        
 
         public ScreenshotTakeWindow(MonitorData monitorData)
         {
@@ -32,6 +32,10 @@ namespace Apposcope_beta
             // Debug-Ausgabe zur Kontrolle
             Debug.WriteLine("Fenster für die Screenshot-Aufnahme geöffnet!");
             Debug.WriteLine(thisMonitor.ToString());
+
+            // Debugging-Hilfe: Überprüfen, ob die Variable im Konstruktor null ist
+            Debug.WriteLine("Konstruktor: showScreenshotWindow ist: " + (App.showScreenshotWindow == null ? "null" : "vorhanden"));
+
         }
 
         // Setzt die Monitorinformationen und platziert das Fenster
@@ -151,25 +155,33 @@ namespace Apposcope_beta
         // Screenshot anzeigen
         private void ShowScreenshot(string screenshotPath)
         {
+            Debug.WriteLine($"Vor Bedingung: showScreenshotWindow == null: {App.showScreenshotWindow == null}");
+            Debug.WriteLine($"showScreenshotWindow == null: {App.showScreenshotWindow == null}"); // Prüfe, ob das Fenster wirklich null ist
+
             if (string.IsNullOrEmpty(screenshotPath))
             {
                 Debug.WriteLine("Kein gültiger Screenshot-Pfad, Fenster wird nicht aktualisiert.");
-                return; // Beende die Methode, wenn der Pfad ungültig ist
+                return;
             }
 
-            if (showScreenshotWindow == null)
+            if (App.showScreenshotWindow != null)
             {
-                Debug.WriteLine("Erstelle neues Screenshot-Fenster.");
-                showScreenshotWindow = new ScreenshotShowWindow(screenshotPath, monitorData, screenshotLeft, screenshotTop);
-                showScreenshotWindow.Show();
+                Debug.WriteLine("Aktualisiere bestehendes Screenshot-Fenster.");
+                App.showScreenshotWindow.UpdateScreenshot(screenshotPath, screenshotLeft, screenshotTop); // Aktualisiere das Fenster
+                BringWindowToFront(App.showScreenshotWindow); // Fenster in den Vordergrund holen
             }
             else
             {
-                Debug.WriteLine("Aktualisiere bestehendes Screenshot-Fenster.");
-                BringWindowToFront(showScreenshotWindow); // Fenster in den Vordergrund holen
-                showScreenshotWindow.UpdateScreenshot(screenshotPath, screenshotLeft, screenshotTop); // Aktualisiere das Fenster
+                Debug.WriteLine("Erstelle neues Screenshot-Fenster.");
+                App.showScreenshotWindow = new ScreenshotShowWindow(screenshotPath, monitorData, screenshotLeft, screenshotTop);
+                App.showScreenshotWindow.Show();
             }
+
+            Debug.WriteLine($"Nach Erstellung/Update: showScreenshotWindow == null: {App.showScreenshotWindow == null}");
+
+
         }
+
 
 
 
