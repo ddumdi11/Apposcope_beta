@@ -116,7 +116,22 @@ namespace Apposcope_beta
 
             if (e.RightButton == MouseButtonState.Pressed)
             {
-                elementChecker.HighlightElement(screenX, screenY, true);
+                elementChecker.HighlightElement(screenX, screenY, true);                
+                var element = FlaUIElementChecker.GetElementAt(screenX, screenY); // Hol das Element mit FlaUI
+
+                if (element != null)
+                {
+                    // Öffne das ActionWindow mit den Details zum Element
+                    var actionWindow = new ActionWindow(element);
+                    actionWindow.Owner = this; // Setze das ScreenshotShowWindow als Besitzer
+                    actionWindow.Show();
+
+                    // Fenster in den Vordergrund bringen
+                    actionWindow.Topmost = true;
+                    actionWindow.Topmost = false; // Zurücksetzen, damit das Verhalten von Topmost sich nicht dauerhaft auswirkt
+                    actionWindow.Activate();
+                    actionWindow.Focus();
+                }
             }
 
         }
