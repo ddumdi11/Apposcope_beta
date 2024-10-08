@@ -168,7 +168,7 @@ namespace Apposcope_beta
             {
                 Debug.WriteLine("Aktualisiere bestehendes Screenshot-Fenster.");
                 App.showScreenshotWindow.UpdateScreenshot(screenshotPath, screenshotLeft, screenshotTop); // Aktualisiere das Fenster
-                BringWindowToFront(App.showScreenshotWindow); // Fenster in den Vordergrund holen
+                //BringWindowToFront(App.showScreenshotWindow); // Fenster in den Vordergrund holen
             }
             else
             {

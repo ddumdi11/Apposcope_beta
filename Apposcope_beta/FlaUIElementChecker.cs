@@ -1,14 +1,9 @@
-﻿using FlaUI.Core.AutomationElements.Infrastructure;
-using FlaUI.Core;
-using FlaUI.Core.Definitions;
-using FlaUI.UIA3;
-using System.Diagnostics;
-using System.Drawing;
-using System.Windows.Media;
+﻿using FlaUI.UIA3;
 using FlaUI.Core.AutomationElements;  // Für Point und andere Geometrie-Funktionen
 using Debug = System.Diagnostics.Debug;
+using FlaUI.Core.Exceptions;
 
-public class FlaUIElementChecker : IDisposable
+public class FlaUIElementChecker
 {
     private readonly UIA3Automation automation;
 
@@ -17,23 +12,37 @@ public class FlaUIElementChecker : IDisposable
         automation = new UIA3Automation();
     }
 
-    public void CheckAndHighlightElement(double screenX, double screenY)
+    public void HighlightElement(double screenX, double screenY, bool doubleClick = false)
     {
-        var element = automation.FromPoint(new System.Drawing.Point((int)screenX, (int)screenY));
-
-        if (element != null && element.Patterns.Invoke.IsSupported)
+        using (var automation = new UIA3Automation())
         {
-            System.Diagnostics.Debug.WriteLine($"Element gefunden an X: {screenX}, Y: {screenY}");
-            element.DrawHighlight(true, System.Drawing.Color.Red);
-        }
-        else
-        {
-            Debug.WriteLine($"Kein Element gefunden an X: {screenX}, Y: {screenY}");
-        }
-    }
+            try
+            {
+                var element = automation.FromPoint(new System.Drawing.Point((int)screenX, (int)screenY));
 
-    public void Dispose()
-    {
-        automation.Dispose();
+                if (element != null && element.Patterns.Invoke.IsSupported)
+                {
+                    Debug.WriteLine($"Element gefunden an X: {screenX}, Y: {screenY}");
+                    element.DrawHighlight(true, System.Drawing.Color.Red);
+
+                    if (doubleClick)
+                    {
+                        element.WaitUntilClickable().AsButton().DoubleClick();
+                    }
+                }
+                else
+                {
+                    Debug.WriteLine($"Kein Element gefunden an X: {screenX}, Y: {screenY}");
+                }
+            }
+            catch (ElementNotAvailableException ex)
+            {
+                Debug.WriteLine($"Element nicht verfügbar: {ex.Message}");
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Unbekannter Fehler: {ex.Message}");
+            }
+        }
     }
 }

@@ -108,15 +108,17 @@ namespace Apposcope_beta
 
             // Verwende den FlaUI-Checker
             var elementChecker = new FlaUIElementChecker();
-            elementChecker.CheckAndHighlightElement(screenX, screenY);
+
+            if (e.LeftButton == MouseButtonState.Pressed)
+            {
+                elementChecker.HighlightElement(screenX, screenY);
+            }
 
             if (e.RightButton == MouseButtonState.Pressed)
             {
-                var automation = new UIA3Automation();
-                // Finde das Element an den Bildschirmkoordinaten (mit System.Drawing.Point)
-                var element = automation.FromPoint(new System.Drawing.Point((int)screenX, (int)screenY));
-                element.AsButton().DoubleClick();
+                elementChecker.HighlightElement(screenX, screenY, true);
             }
+
         }
 
         private async void DrawNewFrame_Click(object sender, EventArgs e)
