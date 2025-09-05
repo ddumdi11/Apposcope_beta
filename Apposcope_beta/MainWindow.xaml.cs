@@ -1,5 +1,6 @@
 ﻿using System.Windows;
 using System.Diagnostics;
+using System.IO;
 
 namespace Apposcope_beta
 {
@@ -54,6 +55,51 @@ namespace Apposcope_beta
 
             // Fenster anzeigen
             screenshotTakeWindow.Show();
+        }
+
+        private void ToggleRecording_Click(object sender, RoutedEventArgs e)
+        {
+            if (ActionRecorder.Instance.IsRecording)
+            {
+                ActionRecorder.Instance.StopRecording();
+                RecordingButton.Content = "Recording starten";
+                RecordingButton.Background = System.Windows.Media.Brushes.LightGray;
+            }
+            else
+            {
+                ActionRecorder.Instance.StartRecording("Apposcope Recording");
+                RecordingButton.Content = "Recording stoppen";
+                RecordingButton.Background = System.Windows.Media.Brushes.Red;
+            }
+        }
+
+        private void SaveRecording_Click(object sender, RoutedEventArgs e)
+        {
+            if (ActionRecorder.Instance.CurrentRecording != null)
+            {
+                ActionRecorder.Instance.SaveCurrentRecording();
+                MessageBox.Show("Recording wurde gespeichert!", "Erfolg", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+            else
+            {
+                MessageBox.Show("Kein Recording verfügbar.", "Fehler", MessageBoxButton.OK, MessageBoxImage.Warning);
+            }
+        }
+
+        private void GenerateScript_Click(object sender, RoutedEventArgs e)
+        {
+            if (ActionRecorder.Instance.CurrentRecording != null)
+            {
+                var timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
+                var scriptPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Desktop), $"AutomationScript_{timestamp}.cs");
+                
+                FlaUIScriptGenerator.SaveScriptToFile(ActionRecorder.Instance.CurrentRecording, scriptPath);
+                MessageBox.Show($"C# Script wurde generiert:\n{scriptPath}", "Erfolg", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+            else
+            {
+                MessageBox.Show("Kein Recording verfügbar.", "Fehler", MessageBoxButton.OK, MessageBoxImage.Warning);
+            }
         }
 
         private void Cancel_Click(object sender, RoutedEventArgs e)
