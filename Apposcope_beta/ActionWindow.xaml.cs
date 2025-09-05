@@ -1,4 +1,4 @@
-﻿using FlaUI.Core.AutomationElements;
+using FlaUI.Core.AutomationElements;
 using FlaUI.Core.Definitions;
 using System.Windows;
 using Window = System.Windows.Window;
@@ -22,7 +22,9 @@ namespace Apposcope_beta
 
         }
 
-        // Aktion: Doppelklick
+        /// <summary>
+        /// Record a "DoubleClick" action for the stored AutomationElement, perform a double-click on that element, and close the window.
+        /// </summary>
         private void DoubleClickAction(object sender, RoutedEventArgs e)
         {
             ActionRecorder.Instance.RecordAction("DoubleClick", element);
@@ -30,7 +32,9 @@ namespace Apposcope_beta
             this.Close(); // Fenster schließen nach der Aktion
         }
 
-        // Aktion: Einfachklick
+        /// <summary>
+        /// Records a "Click" action for the stored AutomationElement, invokes a single click on it, and closes the window.
+        /// </summary>
         private void SingleClickAction(object sender, RoutedEventArgs e)
         {
             ActionRecorder.Instance.RecordAction("Click", element);
@@ -38,7 +42,11 @@ namespace Apposcope_beta
             this.Close();
         }
 
-        // Aktion: SendKeys
+        /// <summary>
+        /// Records a "SendKeys" action for the stored AutomationElement, enters the literal text "Test" into the element's text box, and closes the window.
+        /// </summary>
+        /// <param name="sender">The source of the event.</param>
+        /// <param name="e">Event data associated with the routed event.</param>
         private void SendKeysAction(object sender, RoutedEventArgs e)
         {
             var parameters = new Dictionary<string, object> { { "text", "Test" } };
@@ -47,7 +55,12 @@ namespace Apposcope_beta
             this.Close();
         }
 
-        // Aktion: Dropdown öffnen
+        /// <summary>
+        /// Records an "ExpandDropdown" action for the current element, expands the element as a combo box, and closes the window.
+        /// </summary>
+        /// <remarks>
+        /// Side effects: calls ActionRecorder.Instance.RecordAction("ExpandDropdown", element), expands the target element via <c>AsComboBox().Expand()</c>, and closes this window.
+        /// </remarks>
         private void OpenDropdownAction(object sender, RoutedEventArgs e)
         {
             ActionRecorder.Instance.RecordAction("ExpandDropdown", element);
