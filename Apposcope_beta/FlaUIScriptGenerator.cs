@@ -5,6 +5,11 @@ namespace Apposcope_beta
 {
     public class FlaUIScriptGenerator
     {
+        /// <summary>
+        /// Generates a complete C# FlaUI automation script from the given action recording.
+        /// </summary>
+        /// <param name="recording">An ActionRecording containing the sequence of recorded actions to convert into code.</param>
+        /// <returns>A string with the full C# source for a GeneratedAutomation.AutomatedTest class that, when compiled and run, will perform the recorded actions using UIA3Automation and the included helper element-finding methods.</returns>
         public static string GenerateScript(ActionRecording recording)
         {
             var script = new StringBuilder();
@@ -44,6 +49,17 @@ namespace Apposcope_beta
             return script.ToString();
         }
 
+        /// <summary>
+        /// Generates the C# code fragment that performs a single recorded UI action.
+        /// </summary>
+        /// <remarks>
+        /// The produced fragment includes: an element lookup (using the element identifier from <paramref name="action"/>),
+        /// a null-check, and the action invocation (Click, DoubleClick, SendKeys, ExpandDropdown). For SendKeys, the
+        /// method uses action.Parameters["text"] if present, otherwise the literal "Test". The returned string is trimmed
+        /// of trailing whitespace/newlines.
+        /// </remarks>
+        /// <param name="action">The recorded action to convert into a code block.</param>
+        /// <returns>A string containing the generated C# code for the action, or an if/else block that logs when the element is not found.</returns>
         private static string GenerateActionCode(RecordedAction action)
         {
             var code = new StringBuilder();
@@ -85,6 +101,16 @@ namespace Apposcope_beta
             return code.ToString().TrimEnd();
         }
 
+        /// <summary>
+        /// Produces a C# expression (as a string) that, when emitted in the generated script, will locate the target UI element described by <paramref name="identifier"/>.
+        /// </summary>
+        /// <param name="identifier">An element descriptor containing either a PrimaryId (AutomationId) or a FallbackSelector with one of: Name=, ClassName= (optionally with Index), or HelpText=.</param>
+        /// <returns>
+        /// A string containing a call to one of the generated helper finders (e.g. "FindElementByAutomationId(automation, \"id\")",
+        /// "FindElementByName(automation, \"name\")", "FindElementByClassName(automation, \"class\", index)" or
+        /// "FindElementByHelpText(automation, \"text\")"). If no valid identifier can be derived, returns the literal string
+        /// "null // Could not generate element finder".
+        /// </returns>
         private static string GenerateElementFinder(ElementIdentifier identifier)
         {
             if (!string.IsNullOrEmpty(identifier.PrimaryId))
@@ -116,6 +142,12 @@ namespace Apposcope_beta
             return "null // Could not generate element finder";
         }
 
+        /// <summary>
+        /// Extracts the value for a named property from a selector string.
+        /// </summary>
+        /// <param name="selector">The selector string to parse (e.g., "Name='OK' ClassName='Button' Index=2").</param>
+        /// <param name="property">The property name to extract (e.g., "Name", "ClassName", or "Index").</param>
+        /// <returns>The extracted property value, or an empty string if the property is not present or cannot be parsed. For "Index" the method also accepts an unquoted numeric form like <c>Index=2</c>.</returns>
         private static string ExtractValue(string selector, string property)
         {
             var startIndex = selector.IndexOf($"{property}='") + property.Length + 2;
@@ -140,6 +172,15 @@ namespace Apposcope_beta
             return "";
         }
 
+        /// <summary>
+        /// Returns a C# source-code fragment defining helper methods used by the generated script to locate UI elements.
+        /// </summary>
+        /// <returns>
+        /// A string containing four private helper method definitions: 
+        /// FindElementByAutomationId(UIA3Automation, string), FindElementByName(UIA3Automation, string), 
+        /// FindElementByClassName(UIA3Automation, string, int), and FindElementByHelpText(UIA3Automation, string).
+        /// Each helper returns an AutomationElement when found or null on failure or exception.
+        /// </returns>
         private static string GenerateHelperMethods()
         {
             return @"        private static AutomationElement FindElementByAutomationId(UIA3Automation automation, string automationId)
@@ -196,6 +237,11 @@ namespace Apposcope_beta
         }";
         }
 
+        /// <summary>
+        /// Generates a C# FlaUI automation script from the given recording and writes it to the specified file path.
+        /// </summary>
+        /// <param name="recording">The action recording to convert into a generated script.</param>
+        /// <param name="filePath">The output file path where the generated script will be written; existing files will be overwritten.</param>
         public static void SaveScriptToFile(ActionRecording recording, string filePath)
         {
             var script = GenerateScript(recording);
