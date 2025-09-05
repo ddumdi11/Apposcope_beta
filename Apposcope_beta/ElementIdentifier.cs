@@ -12,6 +12,19 @@ namespace Apposcope_beta
         public string ParentPath { get; set; } = string.Empty;
         public string ControlType { get; set; } = string.Empty;
 
+        /// <summary>
+        /// Creates an ElementIdentifier for the given AutomationElement by selecting the most specific available locator.
+        /// </summary>
+        /// <remarks>
+        /// Selection priority:
+        /// 1. AutomationId (sets PrimaryId).
+        /// 2. Name + ControlType (sets FallbackSelector to "Name='...' AND ControlType='...').  
+        /// 3. ClassName + sibling index (sets FallbackSelector to "ClassName='...' AND Index=...").  
+        /// 4. HelpText or AccessKey combined with ControlType, otherwise ControlType + sibling index as an absolute fallback.  
+        /// In all cases ControlType and ParentPath are populated before returning.
+        /// </remarks>
+        /// <param name="element">The UI Automation element to derive an identifier from.</param>
+        /// <returns>An ElementIdentifier populated using the best available locator information for the element.</returns>
         public static ElementIdentifier CreateFromElement(AutomationElement element)
         {
             var identifier = new ElementIdentifier();
@@ -73,6 +86,11 @@ namespace Apposcope_beta
             return identifier;
         }
 
+        /// <summary>
+        /// Returns the control type name for the given AutomationElement, or "Unknown" if the control type is not available.
+        /// </summary>
+        /// <param name="element">The AutomationElement to inspect.</param>
+        /// <returns>The control type name as a string, or "Unknown" when unavailable.</returns>
         private static string GetControlTypeName(AutomationElement element)
         {
             return element.Properties.ControlType.TryGetValue(out var controlType) 
@@ -80,6 +98,14 @@ namespace Apposcope_beta
                 : "Unknown";
         }
 
+        /// <summary>
+        /// Builds a concise, slash-delimited path describing up to five ancestor elements of the given element.
+        /// </summary>
+        /// <param name="element">The element whose parent hierarchy will be inspected.</param>
+        /// <returns>
+        /// A string starting with '/' and containing up to five ancestor segments separated by '/'. 
+        /// Each segment prefers an AutomationId-based form (<c>Type[@AutomationId='id']</c>), then a Name-based form (<c>Type[@Name='name']</c>), and falls back to just the control type (<c>Type</c>) if neither identifier is available.
+        /// </returns>
         private static string BuildParentPath(AutomationElement element)
         {
             var pathParts = new List<string>();
@@ -112,6 +138,14 @@ namespace Apposcope_beta
             return "/" + string.Join("/", pathParts);
         }
 
+        /// <summary>
+        /// Gets the zero-based index of the given element among its parent's children that share the same control type.
+        /// </summary>
+        /// <param name="element">The element whose sibling index to compute.</param>
+        /// <returns>
+        /// The zero-based position of <paramref name="element"/> among siblings with the same control type.
+        /// Returns 0 if the element has no parent or if the element is not found among the parent's children (note: 0 is also returned for a first-position match).
+        /// </returns>
         private static int GetElementIndexInParent(AutomationElement element)
         {
             var parent = element.Parent;
@@ -134,16 +168,33 @@ namespace Apposcope_beta
             return 0;
         }
 
+        /// <summary>
+        /// Serializes this ElementIdentifier to an indented JSON string.
+        /// </summary>
+        /// <returns>A JSON-formatted string representing the current ElementIdentifier, with indentation for readability.</returns>
         public string ToJson()
         {
             return JsonSerializer.Serialize(this, new JsonSerializerOptions { WriteIndented = true });
         }
 
+        /// <summary>
+        /// Deserializes a JSON string into an <see cref="ElementIdentifier"/>.
+        /// </summary>
+        /// <param name="json">A JSON representation of an ElementIdentifier.</param>
+        /// <returns>
+        /// The deserialized <see cref="ElementIdentifier"/> instance, or a new empty <see cref="ElementIdentifier"/> if deserialization yields null.
+        /// </returns>
         public static ElementIdentifier FromJson(string json)
         {
             return JsonSerializer.Deserialize<ElementIdentifier>(json) ?? new ElementIdentifier();
         }
 
+        /// <summary>
+        /// Returns a concise human-readable representation of the identifier.
+        /// </summary>
+        /// <returns>
+        /// If PrimaryId is set, returns "AutomationId: {PrimaryId} ({ControlType})"; otherwise returns "Fallback: {FallbackSelector}".
+        /// </returns>
         public override string ToString()
         {
             if (!string.IsNullOrEmpty(PrimaryId))
