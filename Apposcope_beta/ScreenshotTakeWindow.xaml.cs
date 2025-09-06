@@ -36,6 +36,9 @@ namespace Apposcope_beta
             // Debugging-Hilfe: Überprüfen, ob die Variable im Konstruktor null ist
             Debug.WriteLine("Konstruktor: showScreenshotWindow ist: " + (App.showScreenshotWindow == null ? "null" : "vorhanden"));
 
+            // Fenster fokussierbar machen für Tasteneingaben
+            this.Focus();
+
         }
 
         // Setzt die Monitorinformationen und platziert das Fenster
@@ -50,11 +53,21 @@ namespace Apposcope_beta
 
         private void OnMouseDown(object sender, MouseButtonEventArgs e)
         {
-            startPoint = e.GetPosition(this);
+            if (e.RightButton == MouseButtonState.Pressed)
+            {
+                // Rechtsklick: Abbrechen
+                CancelFrameSelection();
+                return;
+            }
 
-            // Rechteck für den Auswahlrahmen erstellen
-            selectionRectangle = CreateSelectionRectangle(startPoint);
-            secondCanvas.Children.Add(selectionRectangle);
+            if (e.LeftButton == MouseButtonState.Pressed)
+            {
+                startPoint = e.GetPosition(this);
+
+                // Rechteck für den Auswahlrahmen erstellen
+                selectionRectangle = CreateSelectionRectangle(startPoint);
+                secondCanvas.Children.Add(selectionRectangle);
+            }
         }
 
         private void OnMouseMove(object sender, MouseEventArgs e)
@@ -198,7 +211,30 @@ namespace Apposcope_beta
             }
             window.Activate();
         }
-        
+
+        private void OnKeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.Key == Key.Escape)
+            {
+                // ESC-Taste: Abbrechen
+                CancelFrameSelection();
+            }
+        }
+
+        private void CancelFrameSelection()
+        {
+            Debug.WriteLine("Rahmen-Ziehen abgebrochen.");
+
+            // Rechteck entfernen falls vorhanden
+            if (selectionRectangle != null)
+            {
+                secondCanvas.Children.Remove(selectionRectangle);
+                selectionRectangle = null;
+            }
+
+            // Fenster schließen ohne Screenshot zu erstellen
+            this.Close();
+        }
 
     }
 }

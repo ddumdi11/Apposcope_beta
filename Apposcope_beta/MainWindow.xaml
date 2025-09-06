@@ -9,7 +9,9 @@
         Height="400"
         Width="600"
         WindowStartupLocation="CenterScreen"
-        ResizeMode="NoResize">
+        ResizeMode="NoResize"
+        KeyDown="OnKeyDown"
+        Focusable="True">
 
     <!-- Grid als Basis-Layout -->
     <Grid>

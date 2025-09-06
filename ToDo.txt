@@ -1,0 +1,4 @@
+✅ Abbrechen eines gezogenen Rahmens (ESC/Rechtsklick)
+🔄 Vergrößern des ausgeschnittenen Bereichs (Mausrad - Koordinaten TODO)
+✅ Verschieben des ausgeschnittenen Bereichs (Maus ziehen)
+✅ Beenden des Programms (ESC + Cleanup)

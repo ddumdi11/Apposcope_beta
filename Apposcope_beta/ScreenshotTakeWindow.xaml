@@ -8,7 +8,9 @@
         MouseDown="OnMouseDown"
         MouseMove="OnMouseMove"
         MouseUp="OnMouseUp"
-        AllowsTransparency="True">
+        KeyDown="OnKeyDown"
+        AllowsTransparency="True"
+        Focusable="True">
     <Window.Background>
         <SolidColorBrush Color="White"
                          Opacity="0.01" />

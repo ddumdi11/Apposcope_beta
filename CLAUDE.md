@@ -3,7 +3,7 @@
 ## 🎯 Projekt-Übersicht
 **Typ:** .NET 6 WPF Desktop-Anwendung  
 **Zweck:** Dual-Monitor UI-Automatisierung mit Action-Recording  
-**Status:** Funktionsfähige Beta mit vollständigem Recording-System  
+**Status:** Erweiterte Beta mit Recording + Zoom/Pan-Funktionalität  
 
 ## 🛠️ Entwicklungsumgebung
 
@@ -160,11 +160,33 @@ dotnet publish -c Release -r win-x64 --self-contained true
 Debug.WriteLine("Status-Information");
 ```
 
-## 📚 Weiterentwicklung
+## 📚 Entwicklungsstand (September 2025)
 
-### Geplante Features
+### ✅ Implementierte Features
+- **Rahmen-Abbruch** - ESC/Rechtsklick bricht Rahmen-Auswahl ab
+- **Verbessertes Beenden** - ESC + sauberer Fenster-Cleanup in allen Fenstern
+- **Pan/Verschieben** - Screenshot mit Linker Maus + Ziehen verschieben  
+- **Zoom-Grundlagen** - Mausrad vergrößert/verkleinert Screenshot
+- **Debug-Logging** - Koordinaten-Tracking in `debug.log` für Entwicklung
+- **Koordinaten-Korrektur** - Pan-Offset wird bei Element-Erkennung berücksichtigt
+
+### 🔧 Zoom/Pan-System
+```csharp
+// Aktuelle Pan-Korrektur (funktioniert)
+screenX = (int)(clickPoint.X - translateTransform.X);
+screenY = (int)(clickPoint.Y - translateTransform.Y);
+
+// TODO: Zoom-Korrektur (noch offen)
+screenX = (int)((clickPoint.X - translateTransform.X) / scaleTransform.ScaleX);
+screenY = (int)((clickPoint.Y - translateTransform.Y) / scaleTransform.ScaleY);
+```
+
+### ⏳ Nächste Schritte
+- [ ] **Zoom-Koordinaten** - Korrekte Element-Erkennung nach Zoom/Scale
+- [ ] Zoom-Grenzen und User-Experience optimieren
+
+### 🎯 Geplante Features
 - [ ] Live-Mirroring (statt Screenshot-Update)
-- [ ] Zoom-Funktionalität für Mikroskop-Effekt  
 - [ ] Mehr Action-Types (Drag&Drop, etc.)
 - [ ] Recording-Playback direkt in App
 - [ ] Timeline-View für aufgezeichnete Aktionen
@@ -187,10 +209,11 @@ Debug.WriteLine("Status-Information");
 - Watch-Window für Monitor-Koordinaten nutzen
 - Debug-Output im Output-Window verfolgen
 
-### Logs analysieren
+### Debug-Logging (NEU)
 ```bash
-# Debug-Output beim Ausführen  
-dotnet run > debug.log 2>&1
+# Debug-Log wird automatisch erstellt beim App-Start
+# Ort: \bin\Debug\net6.0-windows\debug.log
+# Inhalt: Koordinaten-Transformationen, Pan/Zoom-Events
 ```
 
 ### FlaUI-Inspektor

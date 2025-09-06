@@ -1,9 +1,11 @@
 ﻿using FlaUI.Core.AutomationElements;
 using FlaUI.UIA3;
 using System.Diagnostics;
+using System.IO;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
+using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using WpfPoint = System.Windows.Point;
 using WpfRectangle = System.Windows.Shapes.Rectangle;
@@ -19,6 +21,16 @@ namespace Apposcope_beta
         private WpfRectangle selectionRectangle;
         private MonitorData monitorData;
         private MonitorInfo thisMonitor;
+        
+        // Zoom und Pan Variablen
+        private ScaleTransform scaleTransform = new ScaleTransform();
+        private TranslateTransform translateTransform = new TranslateTransform();
+        private TransformGroup transformGroup = new TransformGroup();
+        private bool isPanning = false;
+        private WpfPoint panStartPoint;
+        
+        // Debug-Log
+        private static string debugLogPath = Path.Combine(Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location) ?? "", "debug.log");
 
         public ScreenshotShowWindow(string imagePath, MonitorData monitorData, int screenshotLeft, int screenshotTop)
         {
@@ -77,6 +89,15 @@ namespace Apposcope_beta
             // Setze das Bild im Canvas an die linke obere Ecke + Koordinaten des Ursprungsmonitors
             Canvas.SetLeft(ScreenshotImage, screenshotLeft);
             Canvas.SetTop(ScreenshotImage, screenshotTop);
+
+            // Transform-Setup für Zoom und Pan
+            SetupTransforms();
+            
+            // Debug-Log initialisieren
+            InitializeDebugLog();
+
+            // Fenster fokussierbar machen für Tasteneingaben
+            this.Focus();
         }
 
 
@@ -86,16 +107,32 @@ namespace Apposcope_beta
             WpfPoint clickPoint = e.GetPosition(this);
             WpfPoint absoluteClickPoint = new WpfPoint(clickPoint.X + thisMonitor.SystemWidth, clickPoint.Y + thisMonitor.SystemTop);
 
-            // Debug-Ausgabe für den Klickpunkt im ScreenshotWindow
-            Debug.WriteLine($"Klickpunkt im ScreenshotWindow: {clickPoint}");
-            Debug.WriteLine($"WPF-Klickpunkt bei zwei Monitoren: {absoluteClickPoint}");
+            // Linke Maustaste für Panning
+            if (e.LeftButton == MouseButtonState.Pressed)
+            {
+                // Prüfen ob der Klick auf dem Canvas ist (nicht auf Buttons)
+                var hitTest = e.GetPosition(ScreenshotCanvas);
+                var isOnCanvas = hitTest.X >= 0 && hitTest.Y >= 0 && 
+                                hitTest.X <= ScreenshotCanvas.ActualWidth && hitTest.Y <= ScreenshotCanvas.ActualHeight;
+                
+                Debug.WriteLine($"Panning-Check: Canvas-Hit = {isOnCanvas}, HitTest = {hitTest}, Canvas Size = {ScreenshotCanvas.ActualWidth}x{ScreenshotCanvas.ActualHeight}");
+                
+                if (isOnCanvas)
+                {
+                    isPanning = true;
+                    panStartPoint = clickPoint;
+                    this.CaptureMouse();
+                    Debug.WriteLine("Panning gestartet");
+                    return;
+                }
+            }
 
-            // Berechne den äquivalenten Klickpunkt auf dem Bildschirm, von dem der Screenshot gemacht wurde
-            int screenX = (int)(clickPoint.X);
-            int screenY = (int)(clickPoint.Y);
+            // Pan-Offset berücksichtigen für korrekte Original-Koordinaten
+            int screenX = (int)(clickPoint.X - translateTransform.X);
+            int screenY = (int)(clickPoint.Y - translateTransform.Y);
 
-            // Debug-Ausgabe für den äquivalenten Klickpunkt auf dem Bildschirm
-            Debug.WriteLine($"Äquivalenter Klickpunkt auf dem Bildschirm: X = {screenX}, Y = {screenY}");
+            // Debug-Log schreiben
+            LogDebug($"CLICK - Window: {clickPoint} → Screen: {screenX},{screenY} | Pan: {translateTransform.X},{translateTransform.Y} | Scale: {scaleTransform.ScaleX}");
 
             if (screenX < 0 || screenY < 0)
             {
@@ -109,26 +146,22 @@ namespace Apposcope_beta
             // Verwende den FlaUI-Checker
             var elementChecker = new FlaUIElementChecker();
 
-            if (e.LeftButton == MouseButtonState.Pressed)
-            {
-                elementChecker.HighlightElement(screenX, screenY);
-            }
-
-            if (e.RightButton == MouseButtonState.Pressed)
+            // Rechte Maustaste für Element-Auswahl (nur wenn nicht gepant wird)
+            if (e.RightButton == MouseButtonState.Pressed && !isPanning)
             {
                 elementChecker.HighlightElement(screenX, screenY, true);                
-                var element = FlaUIElementChecker.GetElementAt(screenX, screenY); // Hol das Element mit FlaUI
+                var element = FlaUIElementChecker.GetElementAt(screenX, screenY);
 
                 if (element != null)
                 {
                     // Öffne das ActionWindow mit den Details zum Element
                     var actionWindow = new ActionWindow(element);
-                    actionWindow.Owner = this; // Setze das ScreenshotShowWindow als Besitzer
+                    actionWindow.Owner = this;
                     actionWindow.Show();
 
                     // Fenster in den Vordergrund bringen
                     actionWindow.Topmost = true;
-                    actionWindow.Topmost = false; // Zurücksetzen, damit das Verhalten von Topmost sich nicht dauerhaft auswirkt
+                    actionWindow.Topmost = false;
                     actionWindow.Activate();
                     actionWindow.Focus();
                 }
@@ -219,6 +252,167 @@ namespace Apposcope_beta
             {
                 ScreenshotCanvas.Children.Remove(overlay);
             }, TaskScheduler.FromCurrentSynchronizationContext());
+        }
+
+        private void OnKeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.Key == Key.Escape)
+            {
+                // ESC-Taste: Fenster schließen und Hauptfenster wieder anzeigen
+                Debug.WriteLine("ScreenshotShowWindow wird über ESC geschlossen - Hauptfenster wird angezeigt.");
+                ReturnToMainWindow();
+            }
+        }
+
+        private void ReturnToMainWindow()
+        {
+            // Cleanup: App.showScreenshotWindow zurücksetzen
+            App.showScreenshotWindow = null;
+
+            // Hauptfenster suchen und anzeigen
+            foreach (Window window in Application.Current.Windows)
+            {
+                if (window is MainWindow mainWindow)
+                {
+                    mainWindow.Show();
+                    mainWindow.WindowState = WindowState.Normal;
+                    mainWindow.Activate();
+                    mainWindow.Focus();
+                    Debug.WriteLine("Hauptfenster wurde wieder angezeigt.");
+                    break;
+                }
+            }
+
+            // Dieses Fenster schließen
+            this.Close();
+        }
+
+        private void BackToMainWindow_Click(object sender, RoutedEventArgs e)
+        {
+            Debug.WriteLine("Zurück-Button wurde geklickt.");
+            ReturnToMainWindow();
+        }
+
+        private void SetupTransforms()
+        {
+            // Transform-Gruppe erstellen
+            transformGroup.Children.Add(scaleTransform);
+            transformGroup.Children.Add(translateTransform);
+
+            // Transform auf das Canvas anwenden
+            ScreenshotCanvas.RenderTransform = transformGroup;
+            
+            // RenderTransformOrigin für Zoom-Zentrum setzen (Mitte)
+            ScreenshotCanvas.RenderTransformOrigin = new WpfPoint(0.5, 0.5);
+        }
+
+        private void OnMouseMove(object sender, MouseEventArgs e)
+        {
+            if (isPanning && e.LeftButton == MouseButtonState.Pressed)
+            {
+                var currentPoint = e.GetPosition(this);
+                var deltaX = currentPoint.X - panStartPoint.X;
+                var deltaY = currentPoint.Y - panStartPoint.Y;
+
+                translateTransform.X += deltaX;
+                translateTransform.Y += deltaY;
+                
+                // Debug-Log für Pan
+                LogDebug($"PAN - Delta: {deltaX},{deltaY} → New Pan: {translateTransform.X},{translateTransform.Y}");
+
+                panStartPoint = currentPoint;
+            }
+        }
+
+        private void OnMouseUp(object sender, MouseButtonEventArgs e)
+        {
+            if (isPanning)
+            {
+                isPanning = false;
+                this.ReleaseMouseCapture();
+            }
+        }
+
+        private void OnMouseWheel(object sender, MouseWheelEventArgs e)
+        {
+            var zoomFactor = e.Delta > 0 ? 1.1 : 0.9;
+            
+            scaleTransform.ScaleX *= zoomFactor;
+            scaleTransform.ScaleY *= zoomFactor;
+
+            // Zoom-Grenzen
+            if (scaleTransform.ScaleX < 0.1)
+            {
+                scaleTransform.ScaleX = 0.1;
+                scaleTransform.ScaleY = 0.1;
+            }
+            else if (scaleTransform.ScaleX > 10)
+            {
+                scaleTransform.ScaleX = 10;
+                scaleTransform.ScaleY = 10;
+            }
+        }
+
+        private WpfPoint TransformToScreenCoordinates(WpfPoint canvasClickPoint)
+        {
+            try
+            {
+                Debug.WriteLine($"Canvas Click Point: {canvasClickPoint}");
+                
+                // 2. Rück-transformation: Zoom und Pan berücksichtigen
+                // Erst Pan rückgängig machen
+                var unPannedX = (canvasClickPoint.X - translateTransform.X);
+                var unPannedY = (canvasClickPoint.Y - translateTransform.Y);
+                Debug.WriteLine($"Un-panned: {unPannedX}, {unPannedY}");
+                
+                // Dann Zoom rückgängig machen (durch Scale teilen)
+                var originalX = unPannedX / scaleTransform.ScaleX;
+                var originalY = unPannedY / scaleTransform.ScaleY;
+                Debug.WriteLine($"Original (unscaled): {originalX}, {originalY}");
+                
+                // 3. Canvas-Offset hinzufügen (Position des Screenshots im Canvas)
+                var canvasLeft = Canvas.GetLeft(ScreenshotImage);
+                var canvasTop = Canvas.GetTop(ScreenshotImage);
+                Debug.WriteLine($"Canvas Offset: {canvasLeft}, {canvasTop}");
+                
+                var finalX = originalX + canvasLeft;
+                var finalY = originalY + canvasTop;
+                
+                Debug.WriteLine($"Final Screen Coordinates: {finalX}, {finalY}");
+                return new WpfPoint(finalX, finalY);
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Transform-Fehler: {ex.Message}");
+            }
+
+            // Fallback: Originale Koordinaten
+            Debug.WriteLine("Fallback zu Original-Koordinaten");
+            return canvasClickPoint;
+        }
+
+        private static void InitializeDebugLog()
+        {
+            try
+            {
+                File.WriteAllText(debugLogPath, $"=== DEBUG LOG STARTED {DateTime.Now} ===\n");
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Log-Init Fehler: {ex.Message}");
+            }
+        }
+
+        private static void LogDebug(string message)
+        {
+            try
+            {
+                File.AppendAllText(debugLogPath, $"{DateTime.Now:HH:mm:ss.fff} - {message}\n");
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Log-Fehler: {ex.Message}");
+            }
         }
 
     }

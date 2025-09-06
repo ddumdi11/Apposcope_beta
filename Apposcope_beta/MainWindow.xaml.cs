@@ -1,6 +1,7 @@
 using System.Windows;
 using System.Diagnostics;
 using System.IO;
+using System.Windows.Input;
 
 namespace Apposcope_beta
 {
@@ -23,6 +24,9 @@ namespace Apposcope_beta
 
             // Hinzufügen des Ereignisses, um das Verschieben auf den primären Monitor zu verhindern
             this.LocationChanged += MainWindow_LocationChanged;
+
+            // Fenster fokussierbar machen für Tasteneingaben
+            this.Focus();
         }
 
         // Methode, um das Fenster automatisch auf den sekundären Monitor zu setzen
@@ -134,6 +138,55 @@ namespace Apposcope_beta
         /// </summary>
         private void Cancel_Click(object sender, RoutedEventArgs e)
         {
+            CloseApplication();
+        }
+
+        private void OnKeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.Key == Key.Escape)
+            {
+                // ESC-Taste: Programm beenden
+                CloseApplication();
+            }
+        }
+
+        private void CloseApplication()
+        {
+            Debug.WriteLine("Programm wird geschlossen - Cleanup wird durchgeführt.");
+
+            // Cleanup: Screenshot-Fenster schließen falls vorhanden
+            if (App.showScreenshotWindow != null)
+            {
+                try
+                {
+                    App.showScreenshotWindow.Close();
+                    App.showScreenshotWindow = null;
+                    Debug.WriteLine("Screenshot-Fenster wurde geschlossen.");
+                }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine($"Fehler beim Schließen des Screenshot-Fensters: {ex.Message}");
+                }
+            }
+
+            // Cleanup: Alle anderen offenen Fenster der Anwendung schließen
+            try
+            {
+                foreach (Window window in Application.Current.Windows)
+                {
+                    if (window != this && window.IsLoaded)
+                    {
+                        window.Close();
+                        Debug.WriteLine($"Fenster '{window.GetType().Name}' wurde geschlossen.");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Fehler beim Schließen der Fenster: {ex.Message}");
+            }
+
+            // Hauptfenster schließen
             this.Close();
         }
     }
